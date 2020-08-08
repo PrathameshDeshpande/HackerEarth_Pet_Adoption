@@ -7,11 +7,14 @@ import datetime
 
 x = pd.read_csv('train.csv')
 x_test = pd.read_csv('test.csv')
-y_a = pd.DataFrame(x['breed_category'])
-y_b = pd.DataFrame(x['pet_category'])
+y_a = x['breed_category'].astype(int)
+y_b = x['pet_category']
+y_a = y_a.to_frame()
+y_b = y_b.to_frame()
 x = x.drop('pet_category',axis=1)
 x = x.drop('breed_category',axis=1)
 x = x.drop('pet_id',axis=1)
+pet_id = x_test['pet_id']
 x_test = x_test.drop('pet_id', axis=1)
 
 # this line converts the string object in Timestamp object
@@ -45,6 +48,8 @@ x_test['Difference_dates'] = x_test['listing_dates'].sub(x_test['issue_dates'], 
 x_test['Difference_dates'] = x_test['Difference_dates'] / np.timedelta64(1, 'D')
 x_test = x_test.drop("listing_dates", axis=1)
 x_test = x_test.drop("issue_dates", axis=1)
+x = x.drop('Difference_dates',axis=1)
+x_test = x_test.drop('Difference_dates',axis=1)
 
 from sklearn.impute import KNNImputer
 imputer = KNNImputer(n_neighbors=5, weights='uniform', metric='nan_euclidean')
@@ -89,45 +94,40 @@ x = X.fit_transform(x)
 x=pd.DataFrame(x)
 x_test = X.transform(x_test)
 x_test=pd.DataFrame(x_test)
-
-
+from keras.utils.np_utils import to_categorical
+y_a = to_categorical(y_a)
+y_b = to_categorical(y_b)
+y_a = pd.DataFrame(y_a)
+y_b = pd.DataFrame(y_b)
 N,D = x.shape
-model_1 = tf.keras.models.Sequential([
+modelf = tf.keras.models.Sequential([
   tf.keras.layers.Input(shape=(D,)),
-  tf.keras.layers.Dense(4000,activation ='relu'),
-  tf.keras.layers.Dense(4000,activation ='relu'),
-  tf.keras.layers.Dense(3000,activation ='relu'),
-  tf.keras.layers.Dense(3000,activation ='relu'),
-  tf.keras.layers.Dense(2000,activation ='relu'),
-  tf.keras.layers.Dense(2000,activation ='relu'),
-  tf.keras.layers.Dense(1000,activation ='relu'),
   tf.keras.layers.Dense(768,activation ='relu'),
   tf.keras.layers.Dense(512,activation ='relu'),
   tf.keras.layers.Dense(256,activation ='relu'),
   tf.keras.layers.Dense(3, activation='softmax')
 ])
-model_1.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-              metrics=['accuracy'])
-r = model_1.fit(x,y_a,epochs=1,verbose=1)
-y_pred_a= model_1.predict(x_test)
+modelf.compile(optimizer = 'sgd', loss = 'categorical_crossentropy', metrics = ['accuracy'])
+r = modelf.fit(x,y_a,epochs=1000,verbose=1,batch_size=128)
+y_pred_a= modelf.predict(x_test)
+y_pred_a = np.argmax(y_pred_a,axis = 1)
+y_pred_a = pd.Series(y_pred_a,name="breed_category")
 
-model_2 = tf.keras.models.Sequential([
+models = tf.keras.models.Sequential([
   tf.keras.layers.Input(shape=(D,)),
-  tf.keras.layers.Dense(4000,activation ='relu'),
-  tf.keras.layers.Dense(4000,activation ='relu'),
-  tf.keras.layers.Dense(3000,activation ='relu'),
-  tf.keras.layers.Dense(3000,activation ='relu'),
-  tf.keras.layers.Dense(2000,activation ='relu'),
-  tf.keras.layers.Dense(2000,activation ='relu'),
-  tf.keras.layers.Dense(1000,activation ='relu'),
   tf.keras.layers.Dense(768,activation ='relu'),
   tf.keras.layers.Dense(512,activation ='relu'),
   tf.keras.layers.Dense(256,activation ='relu'),
-  tf.keras.layers.Dense(4, activation='softmax')
+  tf.keras.layers.Dense(5, activation='softmax')
 ])
-model_2.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-              metrics=['accuracy'])
-r = model_2.fit(x,y_b,epochs=1,verbose=1)
-y_pred_b= model_2.predict(x_test)
+models.compile(optimizer = 'sgd', loss = 'categorical_crossentropy', metrics = ['accuracy'])
+f = models.fit(x,y_b,epochs=1000,verbose=1,batch_size=128)
+y_pred_b= models.predict(x_test)
+y_pred_b = np.argmax(y_pred_b,axis = 1)
+y_pred_b = pd.Series(y_pred_b,name="pet_category")
+y_pred_a = pd.DataFrame(y_pred_a)
+y_pred_b = pd.DataFrame(y_pred_b)
+pet_id = pd.Series(pet_id,name="pet_id")
+pet_id = pd.DataFrame(pet_id)
+submission = pd.concat([pet_id,y_pred_a,y_pred_b],axis = 1)
+submission.to_csv("SUBMISSION_6.csv",index=False)
