@@ -4,6 +4,7 @@ import sklearn
 import tensorflow as tf
 import os
 import datetime
+from tensorflow.keras import regularizers
 
 x = pd.read_csv('train.csv')
 x_test = pd.read_csv('test.csv')
@@ -102,26 +103,42 @@ y_b = pd.DataFrame(y_b)
 N,D = x.shape
 modelf = tf.keras.models.Sequential([
   tf.keras.layers.Input(shape=(D,)),
-  tf.keras.layers.Dense(768,activation ='relu'),
-  tf.keras.layers.Dense(512,activation ='relu'),
-  tf.keras.layers.Dense(256,activation ='relu'),
-  tf.keras.layers.Dense(3, activation='softmax')
+  tf.keras.layers.Dense(768,activation ='relu', kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
+    bias_regularizer=regularizers.l2(1e-4),activity_regularizer=regularizers.l2(1e-5)),
+  tf.keras.layers.Dropout(0.2),
+  tf.keras.layers.Dense(512,activation ='relu', kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
+    bias_regularizer=regularizers.l2(1e-4),activity_regularizer=regularizers.l2(1e-5)),
+tf.keras.layers.Dropout(0.2),
+  tf.keras.layers.Dense(256,activation ='relu', kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
+    bias_regularizer=regularizers.l2(1e-4),activity_regularizer=regularizers.l2(1e-5)),
+tf.keras.layers.Dropout(0.2),
+  tf.keras.layers.Dense(3, activation='softmax', kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
+    bias_regularizer=regularizers.l2(1e-4),activity_regularizer=regularizers.l2(1e-5))
 ])
-modelf.compile(optimizer = 'sgd', loss = 'categorical_crossentropy', metrics = ['accuracy'])
-r = modelf.fit(x,y_a,epochs=1000,verbose=1,batch_size=128)
+opt = tf.keras.optimizers.SGD(learning_rate=0.1)
+modelf.compile(optimizer = opt, loss = 'categorical_crossentropy', metrics = ['accuracy'])
+r = modelf.fit(x,y_a,epochs=250,verbose=1,batch_size=128)
 y_pred_a= modelf.predict(x_test)
 y_pred_a = np.argmax(y_pred_a,axis = 1)
 y_pred_a = pd.Series(y_pred_a,name="breed_category")
 
 models = tf.keras.models.Sequential([
   tf.keras.layers.Input(shape=(D,)),
-  tf.keras.layers.Dense(768,activation ='relu'),
-  tf.keras.layers.Dense(512,activation ='relu'),
-  tf.keras.layers.Dense(256,activation ='relu'),
-  tf.keras.layers.Dense(5, activation='softmax')
+  tf.keras.layers.Dense(768,activation ='relu', kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
+    bias_regularizer=regularizers.l2(1e-4),activity_regularizer=regularizers.l2(1e-5)),
+tf.keras.layers.Dropout(0.2),
+  tf.keras.layers.Dense(512,activation ='relu', kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
+    bias_regularizer=regularizers.l2(1e-4),activity_regularizer=regularizers.l2(1e-5)),
+tf.keras.layers.Dropout(0.2),
+  tf.keras.layers.Dense(256,activation ='relu', kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
+    bias_regularizer=regularizers.l2(1e-4),activity_regularizer=regularizers.l2(1e-5)),
+tf.keras.layers.Dropout(0.2),
+  tf.keras.layers.Dense(5, activation='softmax', kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
+    bias_regularizer=regularizers.l2(1e-4),activity_regularizer=regularizers.l2(1e-5))
 ])
-models.compile(optimizer = 'sgd', loss = 'categorical_crossentropy', metrics = ['accuracy'])
-f = models.fit(x,y_b,epochs=1000,verbose=1,batch_size=128)
+opt = tf.keras.optimizers.SGD(learning_rate=0.5)
+models.compile(optimizer = opt, loss = 'categorical_crossentropy', metrics = ['accuracy'])
+f = models.fit(x,y_b,epochs=250,verbose=1,batch_size=128)
 y_pred_b= models.predict(x_test)
 y_pred_b = np.argmax(y_pred_b,axis = 1)
 y_pred_b = pd.Series(y_pred_b,name="pet_category")
@@ -130,4 +147,4 @@ y_pred_b = pd.DataFrame(y_pred_b)
 pet_id = pd.Series(pet_id,name="pet_id")
 pet_id = pd.DataFrame(pet_id)
 submission = pd.concat([pet_id,y_pred_a,y_pred_b],axis = 1)
-submission.to_csv("SUBMISSION_6.csv",index=False)
+submission.to_csv("SUBMISSION_11.csv",index=False)
