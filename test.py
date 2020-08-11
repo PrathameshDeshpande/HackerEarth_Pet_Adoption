@@ -71,7 +71,17 @@ x = x.drop("listing_dates",axis=1)
 x = x.drop("issue_dates",axis=1)
 x_test = x_test.drop("listing_dates", axis=1)
 x_test = x_test.drop("issue_dates", axis=1)
-
+x['unknown'] = x['X1'] + x['X2']
+x_test['unknown'] = x_test['X1'] + x_test['X2']
+x['length(m)'] = x['length(m)']*100
+x['size'] = x['length(m)'] * x['height(cm)']
+x_test['size'] = x_test['length(m)'] * x_test['height(cm)']
+x['unknown_2'] = x['X1'] - x['X2']
+x_test['unknown_2'] = x_test['X1'] - x_test['X2']
+x['unknown_2'] = x['unknown_2'].abs()
+x_test['unknown_2'] = x_test['unknown_2'].abs()
+x['unknown_3'] = x['unknown_2'] * x['unknown']
+x_test['unknown_3'] = x_test['unknown_2'] * x_test['unknown']
 
 from sklearn.impute import KNNImputer
 imputer = KNNImputer(n_neighbors=20, weights='uniform', metric='nan_euclidean')
@@ -166,4 +176,4 @@ y_pred_b = pd.DataFrame(y_pred_b)
 pet_id = pd.Series(pet_id,name="pet_id")
 pet_id = pd.DataFrame(pet_id)
 submission = pd.concat([pet_id,y_pred_a,y_pred_b],axis = 1)
-submission.to_csv("SUBMISSION_127.csv",index=False)
+submission.to_csv("SUBMISSION_136.csv",index=False)
