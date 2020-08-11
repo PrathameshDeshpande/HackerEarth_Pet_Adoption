@@ -32,6 +32,8 @@ x = x.drop("issue_date",axis=1)
 x_test = x_test.drop("issue_date", axis=1)
 
 x['listing_date'] = [datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S") for d in x["listing_date"]]
+x['listing_hour'] = [d.hour for d in x['listing_date']]
+x['listing_minute'] = [d.minute for d in x['listing_date']]
 x['listing_dates'] = [datetime.datetime.date(d) for d in x['listing_date']]
 x = x.drop("listing_date",axis=1)
 
@@ -39,6 +41,8 @@ x['Difference_dates'] = x['listing_dates'].sub(x['issue_dates'], axis=0)
 x['Difference_dates'] = x['Difference_dates'] / np.timedelta64(1, 'D')
 
 x_test['listing_date'] = [datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S") for d in x_test["listing_date"]]
+x_test['listing_hour'] = [d.hour for d in x_test['listing_date']]
+x_test['listing_minute'] = [d.minute for d in x_test['listing_date']]
 x_test['listing_dates'] = [datetime.datetime.date(d) for d in x_test['listing_date']]
 x_test = x_test.drop("listing_date", axis=1)
 
@@ -70,7 +74,7 @@ x_test = x_test.drop("issue_dates", axis=1)
 
 
 from sklearn.impute import KNNImputer
-imputer = KNNImputer(n_neighbors=5, weights='uniform', metric='nan_euclidean')
+imputer = KNNImputer(n_neighbors=20, weights='uniform', metric='nan_euclidean')
 
 imputer = imputer.fit(x.iloc[:,0:1])
 x.iloc[:,0:1] = imputer.transform(x.iloc[:,0:1])
@@ -88,7 +92,7 @@ cat_1.drop([0,1,2],axis = 1,inplace=True)
 x = pd.concat([x,cat_1],axis=1)
 
 
-imputer = KNNImputer(n_neighbors=5, weights='uniform', metric='nan_euclidean')
+imputer = KNNImputer(n_neighbors=20, weights='uniform', metric='nan_euclidean')
 
 imputer = imputer.fit(x_test.iloc[:, 0:1])
 x_test.iloc[:, 0:1] = imputer.transform(x_test.iloc[:, 0:1])
@@ -114,21 +118,47 @@ x_test=pd.DataFrame(x_test)
 
 
 from sklearn.ensemble import RandomForestClassifier
-clf=RandomForestClassifier(n_estimators=1000)
+clf=RandomForestClassifier(n_estimators=2000)
 clf.fit(x,y_a)
 y_pred_a=clf.predict(x_test)
 y_pred_a = pd.DataFrame(y_pred_a)
 x = pd.concat([x,y_a],axis=1)
 x_test = pd.concat([x_test,y_pred_a], axis=1)
 
-clf=RandomForestClassifier(n_estimators=1000)
+cat_encoder = sklearn.preprocessing.OneHotEncoder()
+cat_2 = x['breed_category']
+x = x.drop('breed_category',axis=1)
+cat_2 = cat_2.to_frame()
+cat_2 = cat_encoder.fit_transform(cat_2)
+cat_2 = pd.DataFrame(cat_2.toarray())
+cat_2.drop(0,axis = 1,inplace=True)
+
+cat_encoder = sklearn.preprocessing.OneHotEncoder()
+cat_2_t = x_test.iloc[:,-1]
+x_test = x_test.iloc[:,:-1]
+cat_2_t = cat_2_t.to_frame()
+cat_2_t = cat_encoder.fit_transform(cat_2_t)
+cat_2_t = pd.DataFrame(cat_2_t.toarray())
+cat_2_t.drop(0,axis = 1,inplace=True)
+
+x = pd.concat([x,cat_2],axis=1)
+x_test = pd.concat([x_test,cat_2_t], axis=1)
+
+from sklearn.preprocessing import StandardScaler,MinMaxScaler
+X = StandardScaler()
+x = X.fit_transform(x)
+x=pd.DataFrame(x)
+x_test = X.transform(x_test)
+x_test=pd.DataFrame(x_test)
+x = pd.concat([x,cat_2],axis=1)
+x_test = pd.concat([x_test,cat_2_t], axis=1)
+
+clf=RandomForestClassifier(n_estimators=2000)
 clf.fit(x,y_b)
 y_pred_b=clf.predict(x_test)
 
 y_pred_a= y_pred_a.to_numpy()
 y_pred_a = y_pred_a.reshape((y_pred_a.shape[0]))
-y_pred_b= y_pred_b.to_numpy()
-y_pred_b = y_pred_b.reshape((y_pred_b.shape[0]))
 y_pred_a = pd.Series(y_pred_a,name="breed_category")
 y_pred_b = pd.Series(y_pred_b,name="pet_category")
 y_pred_a = pd.DataFrame(y_pred_a)
@@ -136,4 +166,4 @@ y_pred_b = pd.DataFrame(y_pred_b)
 pet_id = pd.Series(pet_id,name="pet_id")
 pet_id = pd.DataFrame(pet_id)
 submission = pd.concat([pet_id,y_pred_a,y_pred_b],axis = 1)
-submission.to_csv("SUBMISSION_120.csv",index=False)
+submission.to_csv("SUBMISSION_127.csv",index=False)
